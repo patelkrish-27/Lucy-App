@@ -74,7 +74,7 @@ class _TasksScreenState extends State<TasksScreen> {
                               ),
                               const SizedBox(width: 14),
                               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                Text(task.title, style: const TextStyle(fontWeight: FontWeight.w650)),
+                                Text(task.title, style: const TextStyle(fontWeight: FontWeight.w600)),
                                 const SizedBox(height: 5),
                                 Text(task.time, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                               ])),
@@ -113,7 +113,7 @@ class TaskDetailScreen extends StatelessWidget {
             child: Column(
               children: [
                 LucyMascot(size: 150, state: running ? LucyMascotState.working : LucyMascotState.success),
-                Text(task.title, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w750)),
+                Text(task.title, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 12),
                 StatusPill(label: running ? 'Lucy is working' : task.status == TaskStatus.completed ? 'Completed' : 'Needs attention', color: color),
               ],
