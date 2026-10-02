@@ -19,7 +19,7 @@ class SettingsScreen extends StatelessWidget {
                 LucyGlow(size: 72, child: Image.asset('assets/lucy/lucy.webp', width: 62, height: 62)),
                 const SizedBox(width: 12),
                 const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Lucy', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w750)),
+                  Text('Lucy', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                   SizedBox(height: 4),
                   Text('Your personal AI agent'),
                 ])),
@@ -77,7 +77,7 @@ class _SettingTile extends StatelessWidget {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(vertical: 3),
       leading: Container(width: 42, height: 42, decoration: BoxDecoration(color: const Color(0xFFB58CFF).withValues(alpha: .1), borderRadius: BorderRadius.circular(14)), child: Icon(icon, color: const Color(0xFFB58CFF))),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w650)),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text(subtitle),
       trailing: trailing ?? const Icon(Icons.chevron_right_rounded),
     );
