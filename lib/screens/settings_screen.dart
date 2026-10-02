@@ -15,7 +15,7 @@ class SettingsScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(22, 14, 22, 0),
             child: LucyCard(
               child: Row(children: [
-                LucyGlow(size: 72, child: Image.asset('assets/lucy/lucy.webp', width: 62, height: 62)),
+                LucyMascot(size: 62, state: LucyMascotState.idle),
                 const SizedBox(width: 12),
                 const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Lucy', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
