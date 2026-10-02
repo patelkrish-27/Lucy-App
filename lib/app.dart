@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/home_screen.dart';
+import 'screens/lucy_shell.dart';
 import 'theme/lucy_theme.dart';
 
 class LucyApp extends StatelessWidget {
@@ -11,7 +11,7 @@ class LucyApp extends StatelessWidget {
       title: 'Lucy',
       debugShowCheckedModeBanner: false,
       theme: LucyTheme.dark(),
-      home: const HomeScreen(),
+      home: const LucyShell(),
     );
   }
 }
