@@ -10,6 +10,9 @@ enum LucyMascotState {
   error,
 }
 
+/// Lucy is intentionally drawn from independent parts rather than rendered as
+/// one flat image. This lets her eyes, arms, mouth, bow and body react to the
+/// current agent state.
 class LucyMascot extends StatefulWidget {
   const LucyMascot({
     super.key,
@@ -32,17 +35,17 @@ class LucyMascot extends StatefulWidget {
 
 class _LucyMascotState extends State<LucyMascot>
     with TickerProviderStateMixin {
-  late final AnimationController _breath;
-  late final AnimationController _motion;
+  late final AnimationController _idle;
+  late final AnimationController _reaction;
 
   @override
   void initState() {
     super.initState();
-    _breath = AnimationController(
+    _idle = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2400),
-    )..repeat(reverse: true);
-    _motion = AnimationController(
+    )..repeat();
+    _reaction = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 650),
     )..forward();
@@ -52,7 +55,7 @@ class _LucyMascotState extends State<LucyMascot>
   void didUpdateWidget(covariant LucyMascot oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.state != widget.state) {
-      _motion
+      _reaction
         ..stop()
         ..forward(from: 0);
     }
@@ -60,56 +63,9 @@ class _LucyMascotState extends State<LucyMascot>
 
   @override
   void dispose() {
-    _breath.dispose();
-    _motion.dispose();
+    _idle.dispose();
+    _reaction.dispose();
     super.dispose();
-  }
-
-  double get _tilt {
-    switch (widget.state) {
-      case LucyMascotState.listening:
-        return -0.035;
-      case LucyMascotState.thinking:
-        return 0.045;
-      case LucyMascotState.working:
-        return -0.018;
-      case LucyMascotState.error:
-        return 0;
-      default:
-        return 0;
-    }
-  }
-
-  double get _lift {
-    switch (widget.state) {
-      case LucyMascotState.listening:
-        return 2;
-      case LucyMascotState.thinking:
-        return -4;
-      case LucyMascotState.working:
-        return 3;
-      case LucyMascotState.success:
-        return -12;
-      default:
-        return 0;
-    }
-  }
-
-  Color get _glow {
-    switch (widget.state) {
-      case LucyMascotState.listening:
-        return const Color(0xFFB58CFF);
-      case LucyMascotState.thinking:
-        return const Color(0xFF8F7CFF);
-      case LucyMascotState.working:
-        return const Color(0xFF7B61FF);
-      case LucyMascotState.success:
-        return const Color(0xFFFF77D9);
-      case LucyMascotState.error:
-        return const Color(0xFFFF6B8A);
-      default:
-        return const Color(0xFF9B70FF);
-    }
   }
 
   @override
@@ -120,68 +76,41 @@ class _LucyMascotState extends State<LucyMascot>
       onDoubleTap: widget.onDoubleTap,
       onLongPress: widget.onLongPress,
       child: AnimatedBuilder(
-        animation: Listenable.merge([_breath, _motion]),
-        builder: (context, child) {
-          final breathe = math.sin(_breath.value * math.pi) * 0.018;
-          final shake = widget.state == LucyMascotState.error
-              ? math.sin(_motion.value * math.pi * 8) * 0.035
+        animation: Listenable.merge([_idle, _reaction]),
+        builder: (context, _) {
+          final t = _idle.value * math.pi * 2;
+          final breathe = math.sin(t) * .018;
+          final reaction = Curves.easeOutBack.transform(_reaction.value);
+          final jump = widget.state == LucyMascotState.success
+              ? math.sin(_reaction.value * math.pi) * .08
               : 0.0;
-          final successJump = widget.state == LucyMascotState.success
-              ? math.sin(_motion.value * math.pi) * 0.06
+          final shake = widget.state == LucyMascotState.error
+              ? math.sin(_reaction.value * math.pi * 8) * .025
               : 0.0;
 
           return SizedBox(
-            width: widget.size * 1.28,
-            height: widget.size * 1.28,
-            child: Stack(
-              alignment: Alignment.center,
-              clipBehavior: Clip.none,
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 350),
-                  width: widget.size * 0.82,
-                  height: widget.size * 0.16,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _glow.withValues(alpha: .22),
-                        blurRadius: widget.state == LucyMascotState.working ? 34 : 24,
-                        spreadRadius: 4,
-                      ),
-                    ],
-                  ),
-                ),
-                Transform.translate(
-                  offset: Offset(0, _lift + successJump * widget.size),
-                  child: Transform.rotate(
-                    angle: _tilt + shake,
-                    child: Transform.scale(
-                      scale: 1 + breathe + successJump,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/lucy/lucy.webp',
-                            width: widget.size,
-                            height: widget.size,
-                            fit: BoxFit.contain,
-                          ),
-                          Positioned.fill(
-                            child: CustomPaint(
-                              painter: _LucyInteractionPainter(
-                                state: widget.state,
-                                pulse: _breath.value,
-                                motion: _motion.value,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+            width: widget.size * 1.35,
+            height: widget.size * 1.35,
+            child: Transform.translate(
+              offset: Offset(
+                shake * widget.size,
+                -jump * widget.size +
+                    (widget.state == LucyMascotState.thinking ? -3 : 0),
+              ),
+              child: Transform.rotate(
+                angle: shake,
+                child: Transform.scale(
+                  scale: 1 + breathe + (reaction * .015),
+                  child: CustomPaint(
+                    size: Size.square(widget.size),
+                    painter: _LucyPainter(
+                      state: widget.state,
+                      t: t,
+                      reaction: reaction,
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           );
         },
@@ -190,124 +119,237 @@ class _LucyMascotState extends State<LucyMascot>
   }
 }
 
-class _LucyInteractionPainter extends CustomPainter {
-  const _LucyInteractionPainter({
+class _LucyPainter extends CustomPainter {
+  const _LucyPainter({
     required this.state,
-    required this.pulse,
-    required this.motion,
+    required this.t,
+    required this.reaction,
   });
 
   final LucyMascotState state;
-  final double pulse;
-  final double motion;
+  final double t;
+  final double reaction;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final sx = size.width / 210;
-    final sy = size.height / 210;
+    final s = size.width / 210;
+    final o = Offset(size.width / 2, size.height / 2);
 
-    Offset p(double x, double y) => Offset(x * sx, y * sy);
-
-    final pupil = Paint()..color = const Color(0xFF32135F);
-    final shine = Paint()..color = Colors.white;
-    final eyelid = Paint()..color = const Color(0xFFD0B8F3);
-    final accent = Paint()
-      ..color = const Color(0xFFC77CFF)
+    Offset p(double x, double y) => Offset(x * s, y * s);
+    Paint fill(Color color) => Paint()..color = color;
+    Paint stroke(Color color, double width) => Paint()
+      ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.4
-      ..strokeCap = StrokeCap.round;
+      ..strokeWidth = width * s
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
-    // The source mascot has fixed pupils. These overlays give Lucy directional
-    // eye movement without changing the original character art.
-    var eyeDx = 0.0;
-    var eyeDy = 0.0;
-    switch (state) {
-      case LucyMascotState.listening:
-        eyeDx = 2.8;
-      case LucyMascotState.thinking:
-        eyeDy = -3.5;
-        eyeDx = -2;
-      case LucyMascotState.working:
-        eyeDx = -2.5;
-      default:
-        eyeDx = math.sin(pulse * math.pi * 2) * 1.2;
-    }
+    final fur = const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFFC9A2FF), Color(0xFF9361E8)],
+    ).createShader(Rect.fromLTWH(35 * s, 30 * s, 140 * s, 160 * s));
 
-    canvas.drawCircle(p(78 + eyeDx, 91 + eyeDy).translate(0, 0), 7.2 * sx, pupil);
-    canvas.drawCircle(p(132 + eyeDx, 91 + eyeDy).translate(0, 0), 7.2 * sx, pupil);
-    canvas.drawCircle(p(75.5 + eyeDx, 88.5 + eyeDy), 2.1 * sx, shine);
-    canvas.drawCircle(p(129.5 + eyeDx, 88.5 + eyeDy), 2.1 * sx, shine);
+    // Ground glow.
+    canvas.drawOval(
+      Rect.fromCenter(center: p(105, 191), width: 118 * s, height: 18 * s),
+      fill(const Color(0x339B70FF)),
+    );
 
-    if (state == LucyMascotState.working) {
-      // Focused eyes.
-      canvas.drawLine(p(69, 82), p(86, 79), accent);
-      canvas.drawLine(p(124, 79), p(141, 82), accent);
-    }
-
+    // Arms move independently with the state.
+    var leftArm = 0.0;
+    var rightArm = 0.0;
     if (state == LucyMascotState.listening) {
-      final r = 78 + math.sin(pulse * math.pi * 2) * 6;
-      canvas.drawCircle(p(105, 98), r * sx, accent..strokeWidth = 1.5);
+      leftArm = -.20;
+      rightArm = .20;
+    } else if (state == LucyMascotState.success) {
+      leftArm = -.52;
+      rightArm = .52;
+    } else if (state == LucyMascotState.thinking) {
+      rightArm = -.38;
+    } else if (state == LucyMascotState.working) {
+      leftArm = .08;
+      rightArm = -.08;
+    }
+
+    void arm(double x, double y, double angle, bool left) {
+      canvas.save();
+      canvas.translate(x * s, y * s);
+      canvas.rotate(angle);
+      final armRect = RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset.zero, width: 35 * s, height: 72 * s),
+        Radius.circular(20 * s),
+      );
+      canvas.drawRRect(armRect, Paint()..shader = fur);
+      canvas.restore();
+    }
+
+    arm(49, 137, leftArm, true);
+    arm(161, 137, rightArm, false);
+
+    // Feet.
+    canvas.drawOval(
+      Rect.fromCenter(center: p(82, 178), width: 45 * s, height: 35 * s),
+      Paint()..shader = fur,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(center: p(128, 178), width: 45 * s, height: 35 * s),
+      Paint()..shader = fur,
+    );
+
+    // Body.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(58 * s, 108 * s, 94 * s, 75 * s),
+        Radius.circular(39 * s),
+      ),
+      Paint()..shader = fur,
+    );
+
+    // Head.
+    final head = Path()
+      ..moveTo(105 * s, 29 * s)
+      ..cubicTo(60 * s, 28 * s, 37 * s, 56 * s, 40 * s, 92 * s)
+      ..cubicTo(43 * s, 127 * s, 68 * s, 145 * s, 105 * s, 145 * s)
+      ..cubicTo(142 * s, 145 * s, 167 * s, 127 * s, 170 * s, 92 * s)
+      ..cubicTo(173 * s, 56 * s, 150 * s, 28 * s, 105 * s, 29 * s)
+      ..close();
+    canvas.drawPath(head, Paint()..shader = fur);
+
+    // Soft cheek blush.
+    canvas.drawOval(
+      Rect.fromCenter(center: p(65, 111), width: 25 * s, height: 12 * s),
+      fill(const Color(0x55FF7FB6)),
+    );
+    canvas.drawOval(
+      Rect.fromCenter(center: p(145, 111), width: 25 * s, height: 12 * s),
+      fill(const Color(0x55FF7FB6)),
+    );
+
+    // Bow.
+    final bow = fill(const Color(0xFF9D6AEF));
+    canvas.drawOval(
+      Rect.fromCenter(center: p(143, 38), width: 36 * s, height: 30 * s),
+      bow,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(center: p(169, 38), width: 36 * s, height: 30 * s),
+      bow,
+    );
+    canvas.drawCircle(p(156, 38), 9 * s, fill(const Color(0xFFB985FF)));
+
+    // Eyes change expression and direction.
+    final eyeY = state == LucyMascotState.working ? 87.0 : 91.0;
+    var lookX = 0.0;
+    var lookY = 0.0;
+    if (state == LucyMascotState.listening) lookX = 3.0;
+    if (state == LucyMascotState.thinking) {
+      lookX = -3.5;
+      lookY = -5.0;
+    }
+    if (state == LucyMascotState.working) lookX = -2.5;
+
+    final eyeSize = state == LucyMascotState.listening ? 25.0 : 23.0;
+    void eye(double x) {
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: p(x, eyeY),
+          width: eyeSize * s,
+          height: 31 * s,
+        ),
+        fill(Colors.white),
+      );
+      canvas.drawCircle(
+        p(x + lookX, eyeY + lookY + 1),
+        11 * s,
+        fill(const Color(0xFF5B2AA6)),
+      );
+      canvas.drawCircle(
+        p(x + lookX, eyeY + lookY + 1),
+        7 * s,
+        fill(const Color(0xFF24104A)),
+      );
+      canvas.drawCircle(
+        p(x - 3 + lookX, eyeY - 4 + lookY),
+        3.2 * s,
+        fill(Colors.white),
+      );
+      canvas.drawCircle(
+        p(x + 4 + lookX, eyeY + 4 + lookY),
+        1.6 * s,
+        fill(const Color(0xFFD9C2FF)),
+      );
+    }
+
+    eye(78);
+    eye(132);
+
+    // Eyebrows.
+    final brow = stroke(const Color(0xFF5B2A9F), 3);
+    if (state == LucyMascotState.thinking) {
+      canvas.drawArc(Rect.fromLTWH(65*s, 65*s, 25*s, 12*s), math.pi*1.05, math.pi*.65, false, brow);
+      canvas.drawArc(Rect.fromLTWH(120*s, 65*s, 25*s, 12*s), math.pi*1.35, math.pi*.65, false, brow);
+    }
+
+    // Mouth changes with emotion.
+    final mouth = stroke(const Color(0xFF4B217F), 3);
+    if (state == LucyMascotState.success) {
+      canvas.drawArc(Rect.fromLTWH(91*s, 100*s, 28*s, 18*s), 0, math.pi, false, mouth);
+    } else if (state == LucyMascotState.error) {
+      canvas.drawArc(Rect.fromLTWH(91*s, 108*s, 28*s, 15*s), math.pi, math.pi, false, mouth);
+    } else if (state == LucyMascotState.thinking) {
+      canvas.drawOval(Rect.fromLTWH(101*s, 104*s, 8*s, 11*s), mouth);
+    } else {
+      canvas.drawArc(Rect.fromLTWH(91*s, 101*s, 28*s, 18*s), 0, math.pi, false, mouth);
+    }
+
+    // State-specific cute details.
+    final sparkle = fill(const Color(0xFFC77CFF));
+    if (state == LucyMascotState.listening) {
+      canvas.drawCircle(p(28, 72), 3*s, sparkle);
+      canvas.drawCircle(p(181, 73), 3*s, sparkle);
+      canvas.drawCircle(p(24, 84), 1.8*s, sparkle);
+      canvas.drawCircle(p(185, 85), 1.8*s, sparkle);
     }
 
     if (state == LucyMascotState.thinking) {
-      canvas.drawCircle(p(165, 46), 10 * sx, accent);
-      canvas.drawCircle(p(165, 46), 3 * sx, accent..style = PaintingStyle.fill);
+      canvas.drawCircle(p(180, 49), 4*s, sparkle);
+      canvas.drawCircle(p(191, 44), 3*s, sparkle);
+      canvas.drawCircle(p(199, 39), 2*s, sparkle);
+    }
+
+    if (state == LucyMascotState.working) {
+      canvas.drawLine(p(70, 76), p(84, 73), brow);
+      canvas.drawLine(p(126, 73), p(140, 76), brow);
     }
 
     if (state == LucyMascotState.success) {
-      for (final offset in [
-        p(42, 68),
-        p(168, 70),
-        p(54, 126),
-        p(158, 126),
-      ]) {
-        canvas.drawCircle(offset, 2.4 * sx, accent..style = PaintingStyle.fill);
+      for (final point in [p(29, 55), p(184, 54), p(37, 96), p(177, 97)]) {
+        canvas.drawCircle(point, 3*s, sparkle);
       }
+      final heart = fill(const Color(0xFFFF72C7));
+      canvas.drawCircle(p(25, 112), 4*s, heart);
+      canvas.drawCircle(p(31, 112), 4*s, heart);
+      final path = Path()..moveTo(21*s,112*s)..lineTo(28*s,122*s)..lineTo(35*s,112*s)..close();
+      canvas.drawPath(path, heart);
     }
 
-    if (state == LucyMascotState.error) {
-      // Soft eyelid overlays for a sad/concerned reaction.
-      canvas.drawOval(
-        Rect.fromCenter(center: p(78, 91), width: 30 * sx, height: 13 * sy),
-        eyelid,
-      );
-      canvas.drawOval(
-        Rect.fromCenter(center: p(132, 91), width: 30 * sx, height: 13 * sy),
-        eyelid,
-      );
-    }
+    // Subtle fur highlight keeps the plush look.
+    final highlight = Paint()
+      ..color = Colors.white.withValues(alpha: .08)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+    canvas.drawOval(
+      Rect.fromCenter(center: p(87, 58), width: 62*s, height: 30*s),
+      highlight,
+    );
 
-    // Hand-area gesture accents: wave/listen/thinking/success feedback follows
-    // the mascot's fixed arms instead of introducing a mismatched second model.
-    if (state == LucyMascotState.listening) {
-      canvas.drawArc(
-        Rect.fromCircle(center: p(41, 126), radius: 13 * sx),
-        -1.4,
-        1.2,
-        false,
-        accent,
-      );
-      canvas.drawArc(
-        Rect.fromCircle(center: p(169, 126), radius: 13 * sx),
-        1.0,
-        1.2,
-        false,
-        accent,
-      );
-    }
-
-    if (state == LucyMascotState.success) {
-      final heart = Paint()
-        ..color = const Color(0xFFFF78D4)
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(p(47, 123), 4 * sx, heart);
-      canvas.drawCircle(p(163, 123), 4 * sx, heart);
-    }
+    // Keep the painter centred in the widget.
+    canvas.drawCircle(o.translate(0, size.height * .001), 0.01, fill(Colors.transparent));
   }
 
   @override
-  bool shouldRepaint(covariant _LucyInteractionPainter oldDelegate) =>
+  bool shouldRepaint(covariant _LucyPainter oldDelegate) =>
       oldDelegate.state != state ||
-      oldDelegate.pulse != pulse ||
-      oldDelegate.motion != motion;
+      oldDelegate.t != t ||
+      oldDelegate.reaction != reaction;
 }
