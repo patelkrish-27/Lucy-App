@@ -32,7 +32,7 @@ class _TasksScreenState extends State<TasksScreen> {
                 LucyCard(
                   child: Row(
                     children: [
-                      LucyGlow(size: 58, child: Image.asset('assets/lucy/lucy.webp', width: 48, height: 48)),
+                      LucyMascot(size: 54, state: LucyMascotState.idle),
                       const SizedBox(width: 12),
                       const Expanded(child: Text('Lucy remembers your recent work so you can pick up where you left off.')),
                     ],
