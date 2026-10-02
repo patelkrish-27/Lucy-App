@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../widgets/cute_graphics.dart';
-import '../widgets/lucy_orb.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
