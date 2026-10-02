@@ -12,8 +12,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _controller = TextEditingController();
+  final _focusNode = FocusNode();
   final _service = LucyService();
+
   bool _sending = false;
+  LucyMascotState _mascotState = LucyMascotState.idle;
 
   final _tasks = const [
     LucyTask(
@@ -29,27 +32,64 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus && !_sending && mounted) {
+        setState(() => _mascotState = LucyMascotState.idle);
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
+  }
+
+  void _setMascot(LucyMascotState state) {
+    if (mounted) setState(() => _mascotState = state);
   }
 
   Future<void> _send() async {
     final prompt = _controller.text.trim();
     if (prompt.isEmpty || _sending) return;
 
-    setState(() => _sending = true);
-    await _service.sendTask(prompt);
-    if (!mounted) return;
-
     setState(() {
-      _sending = false;
-      _controller.clear();
+      _sending = true;
+      _mascotState = LucyMascotState.thinking;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Task sent to Lucy')),
-    );
+    await Future<void>.delayed(const Duration(milliseconds: 450));
+    if (!mounted) return;
+    setState(() => _mascotState = LucyMascotState.working);
+
+    try {
+      await _service.sendTask(prompt);
+      if (!mounted) return;
+
+      setState(() {
+        _sending = false;
+        _controller.clear();
+        _mascotState = LucyMascotState.success;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Task sent to Lucy')),
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 1200));
+      if (mounted && !_sending) {
+        setState(() => _mascotState = LucyMascotState.idle);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _mascotState = LucyMascotState.error;
+      });
+    }
   }
 
   @override
@@ -83,12 +123,37 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(22, 38, 22, 0),
+              padding: const EdgeInsets.fromLTRB(22, 20, 22, 0),
               sliver: SliverToBoxAdapter(
                 child: Column(
                   children: [
-                    const LucyOrb(size: 112),
-                    const SizedBox(height: 28),
+                    LucyMascot(
+                      size: 220,
+                      state: _mascotState,
+                      onTap: () => _setMascot(LucyMascotState.listening),
+                      onDoubleTap: () => _setMascot(LucyMascotState.success),
+                      onLongPress: () => _setMascot(LucyMascotState.thinking),
+                    ),
+                    const SizedBox(height: 8),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: Text(
+                        switch (_mascotState) {
+                          LucyMascotState.idle => 'Ready when you are',
+                          LucyMascotState.listening => 'I\'m listening…',
+                          LucyMascotState.thinking => 'Let me think about that…',
+                          LucyMascotState.working => 'Working on your task…',
+                          LucyMascotState.success => 'Done! ✨',
+                          LucyMascotState.error => 'Something went wrong',
+                        },
+                        key: ValueKey(_mascotState),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
                     Text(
                       'What can I do for you?',
                       style: theme.textTheme.headlineSmall?.copyWith(
@@ -97,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Give Lucy a task and she will take care of it.',
+                      'Tap Lucy, hold Lucy, or give her a task.',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
@@ -106,9 +171,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 26),
                     TextField(
                       controller: _controller,
+                      focusNode: _focusNode,
                       minLines: 1,
                       maxLines: 4,
                       textInputAction: TextInputAction.send,
+                      onTap: () => _setMascot(LucyMascotState.listening),
                       onSubmitted: (_) => _send(),
                       decoration: InputDecoration(
                         hintText: 'Ask Lucy to do something...',
