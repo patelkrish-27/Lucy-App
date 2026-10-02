@@ -206,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Text(
                   'Recent tasks',
                   style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w650,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
