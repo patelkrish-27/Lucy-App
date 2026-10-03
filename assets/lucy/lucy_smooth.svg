@@ -31,8 +31,4 @@
 <ellipse cx="387" cy="286" rx="38" ry="20" fill="#FF83B5" opacity=".42" filter="url(#soft)"/>
 <!-- mouth -->
 <path d="M238 276q22 22 44 0" fill="none" stroke="#43206F" stroke-width="9" stroke-linecap="round"/>
-<!-- base bow -->
-<path d="M350 82c-8-48 19-75 55-54 20 12 29 34 23 56-5 19-24 28-49 24Z" fill="url(#bow)"/>
-<path d="M402 83c18-38 55-52 76-27 20 24 9 59-17 75-20 12-43 5-59-15Z" fill="url(#bow)"/>
-<ellipse cx="402" cy="87" rx="24" ry="20" fill="#C995FF"/>
 </svg>
