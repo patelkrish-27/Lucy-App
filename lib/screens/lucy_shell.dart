@@ -212,7 +212,7 @@ class _WorkspaceOverlay extends StatelessWidget {
                         Text(
                           'Lucy workspace',
                           style: TextStyle(
-                            fontWeight: FontWeight.w750,
+                            fontWeight: FontWeight.w700,
                             fontSize: 15,
                           ),
                         ),
