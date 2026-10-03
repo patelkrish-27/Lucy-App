@@ -335,7 +335,7 @@ class _LucyFacePainter extends CustomPainter {
         break;
       case _LucyAccessory.halo:
         final halo = Paint()
-          ..color = light
+          ..color = light.color
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3;
         canvas.drawOval(const Rect.fromLTWH(79, 8, 35, 15), halo);
@@ -373,7 +373,7 @@ class _LucyFacePainter extends CustomPainter {
     }
 
     if (state == LucyMascotState.working) {
-      final dot = Paint()..color = light.color.withValues(alpha: .45 + pulse * .55);
+      final dot = Paint()..color = light.color.color.withValues(alpha: .45 + pulse * .55);
       canvas.drawRect(const Rect.fromLTWH(17, 94, 4, 4), dot);
       canvas.drawRect(const Rect.fromLTWH(23, 94, 4, 4), dot);
       canvas.drawRect(const Rect.fromLTWH(29, 94, 4, 4), dot);
