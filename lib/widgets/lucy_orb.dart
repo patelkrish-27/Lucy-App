@@ -1,21 +1,18 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-enum LucyMascotState {
-  idle,
-  listening,
-  thinking,
-  working,
-  success,
-  error,
-}
+enum LucyMascotState { idle, listening, thinking, working, success, error }
 
-/// Face-only Lucy. The character is rendered as pixel-art from independent
-/// layers so the eyes, expression, glow and head accessory can animate.
+/// Premium, smooth Lucy mascot for mobile.
+///
+/// Unlike the desktop TUI, this uses a high-resolution SVG plush base plus
+/// animated vector layers for pupils, blinking, expressions, accessories and
+/// sparkles. There are intentionally no hands or legs.
 class LucyMascot extends StatefulWidget {
   const LucyMascot({
     super.key,
-    this.size = 220,
+    this.size = 270,
     this.state = LucyMascotState.idle,
     this.onTap,
     this.onDoubleTap,
@@ -34,19 +31,19 @@ class LucyMascot extends StatefulWidget {
 
 class _LucyMascotState extends State<LucyMascot>
     with TickerProviderStateMixin {
-  late final AnimationController _loop;
+  late final AnimationController _motion;
   late final AnimationController _reaction;
 
   @override
   void initState() {
     super.initState();
-    _loop = AnimationController(
+    _motion = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 6),
+      duration: const Duration(seconds: 7),
     )..repeat();
     _reaction = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 650),
     )..forward();
   }
 
@@ -62,7 +59,7 @@ class _LucyMascotState extends State<LucyMascot>
 
   @override
   void dispose() {
-    _loop.dispose();
+    _motion.dispose();
     _reaction.dispose();
     super.dispose();
   }
@@ -75,16 +72,41 @@ class _LucyMascotState extends State<LucyMascot>
       onDoubleTap: widget.onDoubleTap,
       onLongPress: widget.onLongPress,
       child: AnimatedBuilder(
-        animation: Listenable.merge([_loop, _reaction]),
+        animation: Listenable.merge([_motion, _reaction]),
         builder: (context, _) {
-          return SizedBox(
-            width: widget.size * 1.18,
-            height: widget.size * 1.18,
-            child: CustomPaint(
-              painter: _LucyFacePainter(
-                state: widget.state,
-                phase: _loop.value,
-                reaction: Curves.easeOutBack.transform(_reaction.value),
+          final t = _motion.value * math.pi * 2;
+          final breathe = 1 + math.sin(t) * .012;
+          final bob = math.sin(t) * 2.0;
+          final reaction =
+              Curves.easeOutBack.transform(_reaction.value.clamp(0.0, 1.0));
+
+          return Transform.translate(
+            offset: Offset(0, bob),
+            child: Transform.scale(
+              scale: breathe + reaction * .012,
+              child: SizedBox(
+                width: widget.size,
+                height: widget.size * .83,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned.fill(
+                      child: SvgPicture.asset(
+                        'assets/lucy/lucy_smooth.svg',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _LucyOverlayPainter(
+                          state: widget.state,
+                          phase: _motion.value,
+                          reaction: reaction,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -94,10 +116,10 @@ class _LucyMascotState extends State<LucyMascot>
   }
 }
 
-enum _LucyAccessory { bow, star, halo, flower, catEars, heart }
+enum _Accessory { bow, catEars, halo, flower, heart, crown, star }
 
-class _LucyFacePainter extends CustomPainter {
-  const _LucyFacePainter({
+class _LucyOverlayPainter extends CustomPainter {
+  const _LucyOverlayPainter({
     required this.state,
     required this.phase,
     required this.reaction,
@@ -107,297 +129,299 @@ class _LucyFacePainter extends CustomPainter {
   final double phase;
   final double reaction;
 
-  // The source TUI has a deliberately chunky/pixelated character. Drawing on
-  // this small logical grid and scaling it up preserves that visual language.
-  static const double grid = 128;
-
   @override
   void paint(Canvas canvas, Size size) {
-    final scale = size.width / grid;
-    canvas.scale(scale, scale);
+    final sx = size.width / 520;
+    final sy = size.height / 430;
+    canvas.save();
+    canvas.scale(sx, sy);
 
     final time = phase * math.pi * 2;
-    final pulse = (math.sin(time) + 1) / 2;
-    final blinkCycle = (phase * 3.0) % 1.0;
-    final blinking = blinkCycle > .91 && blinkCycle < .965;
-    final accessory = _LucyAccessory.values[
-        ((phase * 6).floor()) % _LucyAccessory.values.length];
+    final accessory =
+        _Accessory.values[((phase * 7.0).floor()) % _Accessory.values.length];
 
-    final glow = Paint()
-      ..color = const Color(0x554F2A96)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 13);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(10, 28, 108, 84),
-        const Radius.circular(38),
-      ),
-      glow,
-    );
-
-    // Tiny idle float keeps the face alive without adding a body.
-    final y = math.sin(time) * .9;
-
-    canvas.save();
-    canvas.translate(0, y);
-
-    final fur = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFFE0D0FF),
-          Color(0xFFB58AF2),
-          Color(0xFF7650C5),
-        ],
-      ).createShader(const Rect.fromLTWH(15, 17, 98, 96));
-
-    // Pixel-like face silhouette.
-    final face = Path()
-      ..moveTo(32, 20)
-      ..lineTo(96, 20)
-      ..lineTo(106, 28)
-      ..lineTo(113, 42)
-      ..lineTo(116, 65)
-      ..lineTo(111, 87)
-      ..lineTo(101, 101)
-      ..lineTo(86, 109)
-      ..lineTo(42, 109)
-      ..lineTo(27, 101)
-      ..lineTo(17, 87)
-      ..lineTo(12, 65)
-      ..lineTo(15, 42)
-      ..lineTo(22, 28)
-      ..close();
-    canvas.drawPath(face, fur);
-
-    // Chunky shadow pixels around the lower face.
-    final shadow = Paint()..color = const Color(0x26704AAE);
-    for (final r in <Rect>[
-      const Rect.fromLTWH(23, 84, 8, 10),
-      const Rect.fromLTWH(31, 97, 9, 7),
-      const Rect.fromLTWH(91, 94, 10, 8),
-      const Rect.fromLTWH(101, 78, 7, 10),
-    ]) {
-      canvas.drawRect(r, shadow);
-    }
-
-    // Blush blocks.
-    final blush = Paint()..color = const Color(0x66FF8FBF);
-    canvas.drawRect(const Rect.fromLTWH(25, 76, 13, 6), blush);
-    canvas.drawRect(const Rect.fromLTWH(90, 76, 13, 6), blush);
-
-    // Eye state.
     var lookX = 0.0;
     var lookY = 0.0;
-    if (state == LucyMascotState.listening) lookX = 2.2;
-    if (state == LucyMascotState.thinking) {
-      lookX = -2.7;
-      lookY = -3.0;
-    }
-    if (state == LucyMascotState.working) lookX = 1.8;
-    if (state == LucyMascotState.success) lookY = -1.5;
-
-    final eyeY = 61.0;
-    final eyeColor = const Color(0xFF171026);
-    final iris = const Color(0xFF4B238B);
-    final sparkle = const Color(0xFFFFFFFF);
-
-    void eye(double cx) {
-      if (blinking) {
-        canvas.drawRect(
-          Rect.fromLTWH(cx - 10, eyeY - 1, 20, 4),
-          Paint()..color = eyeColor,
-        );
-        return;
-      }
-
-      // Large blocky white eye.
-      canvas.drawRect(
-        Rect.fromLTWH(cx - 12, eyeY - 15, 24, 31),
-        Paint()..color = const Color(0xFFF7F3FF),
-      );
-      canvas.drawRect(
-        Rect.fromLTWH(cx - 15, eyeY - 9, 30, 19),
-        Paint()..color = const Color(0xFFF7F3FF),
-      );
-
-      // Dark pixel iris.
-      final ix = cx + lookX;
-      final iy = eyeY + lookY;
-      canvas.drawRect(
-        Rect.fromLTWH(ix - 9, iy - 10, 18, 22),
-        Paint()..color = iris,
-      );
-      canvas.drawRect(
-        Rect.fromLTWH(ix - 12, iy - 6, 24, 13),
-        Paint()..color = iris,
-      );
-      canvas.drawRect(
-        Rect.fromLTWH(ix - 6, iy - 7, 13, 17),
-        Paint()..color = eyeColor,
-      );
-
-      // Animated twinkle blocks.
-      final twinkle = (math.sin(time * 2.5 + cx) + 1) / 2;
-      if (twinkle > .22) {
-        final twinkleSize = twinkle > .78 ? 5.0 : 3.0;
-        canvas.drawRect(
-          Rect.fromLTWH(ix - 6, iy - 8, twinkleSize, twinkleSize),
-          Paint()..color = sparkle,
-        );
-      }
-      if (twinkle > .62) {
-        canvas.drawRect(
-          Rect.fromLTWH(ix + 5, iy + 4, 3, 3),
-          Paint()..color = const Color(0xFFBDA2FF),
-        );
-      }
+    switch (state) {
+      case LucyMascotState.listening:
+        lookX = 8;
+        break;
+      case LucyMascotState.thinking:
+        lookX = -13;
+        lookY = -9;
+        break;
+      case LucyMascotState.working:
+        lookX = 9;
+        lookY = 3;
+        break;
+      case LucyMascotState.success:
+        lookY = -5;
+        break;
+      case LucyMascotState.error:
+        lookY = 4;
+        break;
+      case LucyMascotState.idle:
+        final wander = math.sin(time * .55);
+        lookX = wander * 5;
+        lookY = math.cos(time * .7) * 2;
+        break;
     }
 
-    eye(50);
-    eye(78);
+    final blinkPhase = (phase * 2.7) % 1.0;
+    final blinking = blinkPhase > .935 && blinkPhase < .985;
 
-    // Eyebrows/expression blocks.
-    final expression = Paint()..color = const Color(0xFF59308F);
-    if (state == LucyMascotState.thinking) {
-      canvas.drawRect(const Rect.fromLTWH(38, 43, 17, 3), expression);
-      canvas.drawRect(const Rect.fromLTWH(73, 43, 17, 3), expression);
-    } else if (state == LucyMascotState.error) {
-      canvas.drawRect(const Rect.fromLTWH(38, 45, 14, 3), expression);
-      canvas.drawRect(const Rect.fromLTWH(76, 45, 14, 3), expression);
-    }
+    // Glossy violet pupils. These are separate from the SVG eye whites,
+    // allowing Lucy to look around smoothly.
+    _paintEye(canvas, const Offset(182, 213), lookX, lookY, blinking, time);
+    _paintEye(canvas, const Offset(338, 213), lookX, lookY, blinking, time);
 
-    // Mouth is deliberately tiny and expressive.
-    final mouth = Paint()
-      ..color = const Color(0xFF3D2169)
+    // State expression overlays.
+    final expression = Paint()
+      ..color = const Color(0xFF4A226F)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
+      ..strokeWidth = 7
       ..strokeCap = StrokeCap.round;
 
     if (state == LucyMascotState.success) {
-      canvas.drawArc(
-        const Rect.fromLTWH(56, 73, 16, 11),
-        0,
-        math.pi,
-        false,
-        mouth,
-      );
+      canvas.drawArc(const Rect.fromLTWH(228, 263, 64, 35), 0, math.pi,
+          false, expression);
     } else if (state == LucyMascotState.error) {
-      canvas.drawArc(
-        const Rect.fromLTWH(56, 78, 16, 9),
-        math.pi,
-        math.pi,
-        false,
-        mouth,
-      );
+      canvas.drawArc(const Rect.fromLTWH(228, 280, 64, 28), math.pi, math.pi,
+          false, expression);
     } else if (state == LucyMascotState.thinking) {
-      canvas.drawRect(const Rect.fromLTWH(62, 77, 5, 6), Paint()..color = mouth.color);
-    } else {
-      canvas.drawArc(
-        const Rect.fromLTWH(57, 74, 14, 9),
-        0,
-        math.pi,
-        false,
-        mouth,
+      canvas.drawOval(
+        const Rect.fromLTWH(252, 274, 16, 11),
+        Paint()..color = const Color(0xFF4A226F),
       );
     }
 
-    _paintAccessory(canvas, accessory, pulse);
+    _paintAccessory(canvas, accessory, time);
+    _paintSparkles(canvas, time);
 
-    // State sparkles float around the face.
-    final sparklePaint = Paint()..color = const Color(0xFFCB9BFF);
-    final sparkleAlpha = .35 + pulse * .65;
-    sparklePaint.color = const Color(0xFFCB9BFF).withValues(alpha: sparkleAlpha);
-    _pixelSparkle(canvas, 17, 38, 3, sparklePaint);
-    _pixelSparkle(canvas, 109, 49, 2.5, sparklePaint);
-    if (state == LucyMascotState.listening ||
-        state == LucyMascotState.success) {
-      _pixelSparkle(canvas, 12, 71, 2, sparklePaint);
-      _pixelSparkle(canvas, 116, 76, 2, sparklePaint);
+    if (state == LucyMascotState.success) {
+      _paintHeart(canvas, 455, 300, 1.0 + math.sin(time * 2) * .12);
     }
 
     canvas.restore();
   }
 
-  void _paintAccessory(Canvas canvas, _LucyAccessory accessory, double pulse) {
-    final purple = Paint()..color = const Color(0xFF9E69E8);
-    final light = Paint()..color = const Color(0xFFC79AFF);
-    final pink = Paint()..color = const Color(0xFFFF7DC7);
+  void _paintEye(
+    Canvas canvas,
+    Offset center,
+    double lookX,
+    double lookY,
+    bool blinking,
+    double time,
+  ) {
+    if (blinking) {
+      final lid = Paint()..color = const Color(0xFFC9A5F4);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(center.dx, center.dy),
+          width: 108,
+          height: 48,
+        ),
+        lid,
+      );
+      canvas.drawLine(
+        Offset(center.dx - 47, center.dy),
+        Offset(center.dx + 47, center.dy),
+        Paint()
+          ..color = const Color(0xFF4B216F)
+          ..strokeWidth = 7
+          ..strokeCap = StrokeCap.round,
+      );
+      return;
+    }
+
+    final p = Offset(center.dx + lookX, center.dy + lookY);
+    final iris = Paint()
+      ..shader = const RadialGradient(
+        colors: [
+          Color(0xFFB887FF),
+          Color(0xFF6331C0),
+          Color(0xFF241044),
+        ],
+      ).createShader(
+        Rect.fromCenter(center: p, width: 76, height: 86),
+      );
+
+    canvas.drawOval(
+      Rect.fromCenter(center: p, width: 76, height: 86),
+      iris,
+    );
+
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(p.dx - 12, p.dy - 17),
+        width: 18,
+        height: 24,
+      ),
+      Paint()..color = Colors.white,
+    );
+
+    final twinkle = (.5 + .5 * math.sin(time * 3.0 + center.dx)) ;
+    if (twinkle > .15) {
+      canvas.drawCircle(
+        Offset(p.dx + 15, p.dy + 18),
+        4 + twinkle * 2,
+        Paint()..color = const Color(0xFFDCC9FF),
+      );
+    }
+
+    if (state == LucyMascotState.listening) {
+      final ring = Paint()
+        ..color = const Color(0xFFB87BFF).withValues(alpha: .16)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4;
+      canvas.drawOval(
+        Rect.fromCenter(center: p, width: 94, height: 104),
+        ring,
+      );
+    }
+  }
+
+  void _paintAccessory(Canvas canvas, _Accessory accessory, double time) {
+    final purple = Paint()..color = const Color(0xFF9D65E5);
+    final light = Paint()..color = const Color(0xFFD3A8FF);
+    final pink = Paint()..color = const Color(0xFFFF86C5);
+    final gold = Paint()..color = const Color(0xFFFFD56A);
 
     switch (accessory) {
-      case _LucyAccessory.bow:
-        canvas.drawRect(const Rect.fromLTWH(82, 17, 17, 16), purple);
-        canvas.drawRect(const Rect.fromLTWH(98, 12, 16, 21), purple);
-        canvas.drawRect(const Rect.fromLTWH(92, 20, 10, 10), light);
+      case _Accessory.bow:
+        canvas.drawOval(const Rect.fromLTWH(344, 43, 75, 82), purple);
+        canvas.drawOval(const Rect.fromLTWH(397, 49, 82, 78), purple);
+        canvas.drawCircle(const Offset(405, 88), 25, light);
         break;
-      case _LucyAccessory.star:
-        _pixelStar(canvas, 99, 20, light);
-        break;
-      case _LucyAccessory.halo:
-        final halo = Paint()
-          ..color = light.color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3;
-        canvas.drawOval(const Rect.fromLTWH(79, 8, 35, 15), halo);
-        break;
-      case _LucyAccessory.flower:
-        for (final o in [
-          const Offset(96, 16),
-          const Offset(103, 21),
-          const Offset(89, 21),
-          const Offset(96, 26),
-        ]) {
-          canvas.drawRect(Rect.fromCenter(center: o, width: 9, height: 7), pink);
-        }
-        canvas.drawRect(const Rect.fromLTWH(93, 18, 7, 7), light);
-        break;
-      case _LucyAccessory.catEars:
+      case _Accessory.catEars:
         final left = Path()
-          ..moveTo(80, 27)
-          ..lineTo(84, 7)
-          ..lineTo(94, 25)
+          ..moveTo(350, 103)
+          ..lineTo(365, 25)
+          ..lineTo(407, 92)
           ..close();
         final right = Path()
-          ..moveTo(96, 25)
-          ..lineTo(108, 7)
-          ..lineTo(111, 29)
+          ..moveTo(408, 92)
+          ..lineTo(457, 25)
+          ..lineTo(474, 106)
           ..close();
         canvas.drawPath(left, purple);
         canvas.drawPath(right, purple);
         break;
-      case _LucyAccessory.heart:
-        canvas.drawRect(const Rect.fromLTWH(88, 14, 8, 8), pink);
-        canvas.drawRect(const Rect.fromLTWH(96, 14, 8, 8), pink);
-        canvas.drawRect(const Rect.fromLTWH(92, 19, 9, 8), pink);
+      case _Accessory.halo:
+        final halo = Paint()
+          ..color = light.color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 9;
+        canvas.drawOval(const Rect.fromLTWH(330, 20, 145, 45), halo);
+        break;
+      case _Accessory.flower:
+        for (final o in const [
+          Offset(392, 50),
+          Offset(420, 66),
+          Offset(410, 96),
+          Offset(378, 86),
+          Offset(374, 58),
+        ]) {
+          canvas.drawCircle(o, 20, pink);
+        }
+        canvas.drawCircle(const Offset(397, 73), 13, gold);
+        break;
+      case _Accessory.heart:
+        _paintHeart(canvas, 405, 65, 1.35);
+        break;
+      case _Accessory.crown:
+        final crown = Path()
+          ..moveTo(345, 92)
+          ..lineTo(360, 25)
+          ..lineTo(402, 63)
+          ..lineTo(438, 23)
+          ..lineTo(464, 92)
+          ..close();
+        canvas.drawPath(crown, gold);
+        break;
+      case _Accessory.star:
+        _paintStar(canvas, 405, 66, light, 1.3);
         break;
     }
 
-    if (state == LucyMascotState.working) {
-      final dot = Paint()..color = light.color.withValues(alpha: .45 + pulse * .55);
-      canvas.drawRect(const Rect.fromLTWH(17, 94, 4, 4), dot);
-      canvas.drawRect(const Rect.fromLTWH(23, 94, 4, 4), dot);
-      canvas.drawRect(const Rect.fromLTWH(29, 94, 4, 4), dot);
+    // A tiny accessory shimmer makes changes feel intentional rather than
+    // like a hard image swap.
+    final shimmer = .25 + .25 * math.sin(time * 2);
+    canvas.drawCircle(
+      const Offset(465, 125),
+      3 + shimmer * 5,
+      Paint()..color = Colors.white.withValues(alpha: shimmer),
+    );
+  }
+
+  void _paintSparkles(Canvas canvas, double time) {
+    final pulse = .35 + .65 * (.5 + .5 * math.sin(time * 2.2));
+    final paint = Paint()
+      ..color = const Color(0xFFC99AFF).withValues(alpha: pulse);
+    _sparkle(canvas, 65, 160, 7, paint);
+    _sparkle(canvas, 458, 185, 6, paint);
+    _sparkle(canvas, 92, 300, 4, paint);
+
+    if (state == LucyMascotState.listening ||
+        state == LucyMascotState.thinking ||
+        state == LucyMascotState.working) {
+      _sparkle(canvas, 475, 275, 5, paint);
+      _sparkle(canvas, 40, 250, 4, paint);
     }
   }
 
-  void _pixelSparkle(
+  void _sparkle(Canvas canvas, double x, double y, double r, Paint paint) {
+    canvas.drawLine(Offset(x - r, y), Offset(x + r, y), paint..strokeWidth = 3);
+    canvas.drawLine(Offset(x, y - r), Offset(x, y + r), paint..strokeWidth = 3);
+  }
+
+  void _paintHeart(Canvas canvas, double x, double y, double scale) {
+    final p = Path()
+      ..moveTo(x, y + 24 * scale)
+      ..cubicTo(
+        x - 35 * scale,
+        y,
+        x - 18 * scale,
+        y - 28 * scale,
+        x,
+        y - 10 * scale,
+      )
+      ..cubicTo(
+        x + 18 * scale,
+        y - 28 * scale,
+        x + 35 * scale,
+        y,
+        x,
+        y + 24 * scale,
+      )
+      ..close();
+    canvas.drawPath(p, Paint()..color = const Color(0xFFFF86C5));
+  }
+
+  void _paintStar(
     Canvas canvas,
     double x,
     double y,
-    double r,
     Paint paint,
+    double scale,
   ) {
-    canvas.drawRect(Rect.fromLTWH(x - r / 2, y - r * 1.7, r, r * 3.4), paint);
-    canvas.drawRect(Rect.fromLTWH(x - r * 1.7, y - r / 2, r * 3.4, r), paint);
-  }
-
-  void _pixelStar(Canvas canvas, double x, double y, Paint paint) {
-    _pixelSparkle(canvas, x, y, 4, paint);
-    canvas.drawRect(Rect.fromLTWH(x - 3, y - 3, 6, 6), paint);
+    final path = Path();
+    for (var i = 0; i < 10; i++) {
+      final r = (i.isEven ? 28 : 11) * scale;
+      final a = -math.pi / 2 + i * math.pi / 5;
+      final p = Offset(x + math.cos(a) * r, y + math.sin(a) * r);
+      if (i == 0) {
+        path.moveTo(p.dx, p.dy);
+      } else {
+        path.lineTo(p.dx, p.dy);
+      }
+    }
+    path.close();
+    canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(covariant _LucyFacePainter oldDelegate) =>
+  bool shouldRepaint(covariant _LucyOverlayPainter oldDelegate) =>
       oldDelegate.state != state ||
       oldDelegate.phase != phase ||
       oldDelegate.reaction != reaction;
