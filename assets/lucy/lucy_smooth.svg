@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 430">
+<defs>
+  <radialGradient id="fur" cx="42%" cy="30%" r="75%"><stop offset="0" stop-color="#F1E6FF"/><stop offset=".38" stop-color="#D5B8FF"/><stop offset=".72" stop-color="#A879E8"/><stop offset="1" stop-color="#7147B9"/></radialGradient>
+  <radialGradient id="face" cx="50%" cy="35%" r="70%"><stop offset="0" stop-color="#EEDFFF"/><stop offset=".58" stop-color="#C9A5F4"/><stop offset="1" stop-color="#9870D5"/></radialGradient>
+  <radialGradient id="iris" cx="35%" cy="25%" r="75%"><stop offset="0" stop-color="#9C6BFF"/><stop offset=".5" stop-color="#5A2FB0"/><stop offset="1" stop-color="#241044"/></radialGradient>
+  <linearGradient id="bow" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#D0A5FF"/><stop offset=".55" stop-color="#A66DE5"/><stop offset="1" stop-color="#7041B5"/></linearGradient>
+  <filter id="shadow"><feGaussianBlur stdDeviation="13"/></filter>
+  <filter id="soft"><feGaussianBlur stdDeviation="3"/></filter>
+</defs>
+<ellipse cx="260" cy="382" rx="205" ry="25" fill="#8D55E8" opacity=".18" filter="url(#shadow)"/>
+<!-- plush face -->
+<path d="M62 205C62 112 135 39 260 39s198 73 198 166c0 100-76 183-198 183S62 305 62 205Z" fill="#6E43B6" opacity=".22" filter="url(#soft)"/>
+<path d="M68 199C68 105 141 31 260 31s192 74 192 168c0 103-75 180-192 180S68 302 68 199Z" fill="url(#fur)"/>
+<path d="M88 191C88 112 151 55 260 55s172 57 172 136c0 87-67 158-172 158S88 278 88 191Z" fill="url(#face)" opacity=".96"/>
+<!-- subtle plush texture strokes -->
+<g fill="none" stroke="#FFFFFF" stroke-opacity=".10" stroke-linecap="round">
+ <path d="M118 127c35-47 73-62 112-67"/><path d="M103 154c28-48 63-71 103-83"/><path d="M397 151c-24-47-59-70-96-83"/><path d="M111 260c31 48 72 68 112 75"/><path d="M409 260c-31 48-72 68-112 75"/>
+</g>
+<!-- eyebrows -->
+<path d="M143 146q29-23 58-2" fill="none" stroke="#5B2B8F" stroke-width="9" stroke-linecap="round"/>
+<path d="M319 144q29-21 58 2" fill="none" stroke="#5B2B8F" stroke-width="9" stroke-linecap="round"/>
+<!-- eye whites -->
+<ellipse id="leftEye" cx="182" cy="213" rx="61" ry="72" fill="#FBF8FF"/>
+<ellipse id="rightEye" cx="338" cy="213" rx="61" ry="72" fill="#FBF8FF"/>
+<!-- lashes -->
+<g stroke="#3A1B61" stroke-width="8" stroke-linecap="round">
+<path d="M126 178l-13-12"/><path d="M132 165l-8-15"/><path d="M394 178l13-12"/><path d="M388 165l8-15"/>
+</g>
+<!-- blush -->
+<ellipse cx="133" cy="286" rx="38" ry="20" fill="#FF83B5" opacity=".42" filter="url(#soft)"/>
+<ellipse cx="387" cy="286" rx="38" ry="20" fill="#FF83B5" opacity=".42" filter="url(#soft)"/>
+<!-- mouth -->
+<path d="M238 276q22 22 44 0" fill="none" stroke="#43206F" stroke-width="9" stroke-linecap="round"/>
+<!-- base bow -->
+<path d="M350 82c-8-48 19-75 55-54 20 12 29 34 23 56-5 19-24 28-49 24Z" fill="url(#bow)"/>
+<path d="M402 83c18-38 55-52 76-27 20 24 9 59-17 75-20 12-43 5-59-15Z" fill="url(#bow)"/>
+<ellipse cx="402" cy="87" rx="24" ry="20" fill="#C995FF"/>
+</svg>
