@@ -128,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   children: [
                     LucyMascot(
-                      size: 220,
+                      size: 270,
                       state: _mascotState,
                       onTap: () => _setMascot(LucyMascotState.listening),
                       onDoubleTap: () => _setMascot(LucyMascotState.success),
@@ -162,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Tap Lucy, hold Lucy, or give her a task.',
+                      'Tap Lucy, hold Lucy, or give her a task. Watch her eyes sparkle.',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
