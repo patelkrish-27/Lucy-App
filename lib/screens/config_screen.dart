@@ -75,7 +75,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
       padding: const EdgeInsets.fromLTRB(24, 10, 24, 32),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const LucyMascot(size: 100, state: LucyMascotState.listening),
-        const Text('Scan Lucy Desktop', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w750)),
+        const Text('Scan Lucy Desktop', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         const Text('Your desktop agent can display a QR code containing the WebSocket address.', textAlign: TextAlign.center),
         const SizedBox(height: 18),
@@ -101,7 +101,7 @@ class _Group extends StatelessWidget {
   @override Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(top: 25),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(title, style: const TextStyle(color: Color(0xFFB879FF), fontWeight: FontWeight.w750, fontSize: 13)),
+      Text(title, style: const TextStyle(color: Color(0xFFB879FF), fontWeight: FontWeight.w700, fontSize: 13)),
       const SizedBox(height: 8),
       LucyCard(child: Column(children: children)),
     ]),
