@@ -37,7 +37,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
           const SizedBox(height: 16),
           _OrDivider(),
           const SizedBox(height: 8),
-          const Text('Server URL', style: TextStyle(fontWeight: FontWeight.w650)),
+          const Text('Server URL', style: TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 7),
           TextField(
             controller: TextEditingController(text: 'ws://192.168.1.100:9847'),
