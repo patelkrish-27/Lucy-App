@@ -34,7 +34,7 @@ class FilesScreen extends StatelessWidget {
               const Icon(Icons.chevron_right_rounded),
             ])),
             const SizedBox(height: 18),
-            const Text('Recent', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w750)),
+            const Text('Recent', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
             ...[
               ('lucy_orb.dart', 'Dart · 18 KB', Icons.code_rounded),
