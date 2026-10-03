@@ -35,7 +35,7 @@ class SessionsScreen extends StatelessWidget {
             sliver: SliverList.list(children: [
               _ConnectionCard(),
               const SizedBox(height: 22),
-              const Text('Active sessions', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w750)),
+              const Text('Active sessions', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
               _SessionCard(
                 title: 'Lucy Desktop',
@@ -136,7 +136,7 @@ class _SessionCard extends StatelessWidget {
             ),
             const SizedBox(width: 13),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w750, fontSize: 16)),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
               const SizedBox(height: 4),
               Text(subtitle, style: const TextStyle(color: Color(0xFFAAA0B5), fontSize: 12)),
               const SizedBox(height: 8),
