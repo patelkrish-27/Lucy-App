@@ -110,7 +110,8 @@ class _ConfigScreenState extends State<ConfigScreen> {
             Expanded(
               child: MobileScanner(
                 onDetect: (capture) async {
-                  final raw = capture.barcodes.firstOrNull?.rawValue;
+                  if (capture.barcodes.isEmpty) return;
+                  final raw = capture.barcodes.first.rawValue;
                   if (raw == null) return;
                   try {
                     final data = jsonDecode(raw);
@@ -142,7 +143,8 @@ class _ConfigScreenState extends State<ConfigScreen> {
       ),
     );
     if (mounted) setState(() => _connecting = false);
-  }}
+  }
+}
 
 class _OrDivider extends StatelessWidget {
   @override Widget build(BuildContext context) => Row(children: [
