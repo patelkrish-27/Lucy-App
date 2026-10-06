@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import '../services/lucy_service.dart';
 import '../widgets/cute_graphics.dart';
 import '../widgets/lucy_orb.dart';
 
@@ -12,6 +15,15 @@ class _ConfigScreenState extends State<ConfigScreen> {
   bool notifications = true;
   bool haptics = true;
   bool folderOnSession = false;
+  final _service = LucyService();
+  LucyConnection? _connection;
+  bool _connecting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _service.savedConnection().then((v) { if (mounted) setState(() => _connection = v); });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,25 +40,36 @@ class _ConfigScreenState extends State<ConfigScreen> {
             LucyMascot(size: 62, state: LucyMascotState.listening),
           ]),
           const SizedBox(height: 18),
-          FilledButton.icon(
-            onPressed: () => _showQr(context),
-            icon: const Icon(Icons.qr_code_scanner_rounded),
-            label: const Text('Scan QR Code'),
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(58)),
-          ),
-          const SizedBox(height: 16),
-          _OrDivider(),
-          const SizedBox(height: 8),
-          const Text('Server URL', style: TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 7),
-          TextField(
-            controller: TextEditingController(text: 'ws://192.168.1.100:9847'),
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.link_rounded),
-              suffixIcon: Icon(Icons.help_outline_rounded, size: 19),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF17131D),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFFB879FF).withValues(alpha: .24)),
             ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(_connection == null ? Icons.link_off_rounded : Icons.check_circle_rounded,
+                    color: _connection == null ? const Color(0xFF8E8796) : const Color(0xFF7DE2A8)),
+                const SizedBox(width: 10),
+                Text(_connection == null ? 'Not connected' : 'Connected',
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
+              ]),
+              const SizedBox(height: 8),
+              Text(_connection == null
+                  ? 'Scan the QR code shown by Lucy Desktop. No IP address or token is needed.'
+                  : 'Connected to ${_connection!.name}.',
+                  style: const TextStyle(color: Color(0xFFB9AEC7))),
+              const SizedBox(height: 16),
+              SizedBox(width: double.infinity, child: FilledButton.icon(
+                onPressed: _connecting ? null : () => _scan(context),
+                icon: _connecting
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.qr_code_scanner_rounded),
+                label: Text(_connecting ? 'Connecting…' : 'Scan Lucy QR'),
+              )),
+            ]),
           ),
-          const Padding(padding: EdgeInsets.only(top: 6, left: 4), child: Text('WebSocket URL from your Lucy desktop agent. Use Tailscale for remote access.', style: TextStyle(fontSize: 11, color: Color(0xFF8E8796)))),
           const SizedBox(height: 28),
           _Group(title: 'Notifications', children: [
             _SwitchRow(title: 'Notifications', subtitle: 'Notify when Lucy needs attention', value: notifications, onChanged: (v) => setState(() => notifications = v)),
@@ -70,22 +93,56 @@ class _ConfigScreenState extends State<ConfigScreen> {
     );
   }
 
-  void _showQr(BuildContext context) {
-    showModalBottomSheet(context: context, showDragHandle: true, builder: (_) => Padding(
-      padding: const EdgeInsets.fromLTRB(24, 10, 24, 32),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const LucyMascot(size: 100, state: LucyMascotState.listening),
-        const Text('Scan Lucy Desktop', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        const Text('Your desktop agent can display a QR code containing the WebSocket address.', textAlign: TextAlign.center),
-        const SizedBox(height: 18),
-        Container(width: 170, height: 170, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.qr_code_2_rounded, size: 130, color: Colors.black)),
-        const SizedBox(height: 16),
-        const Text('Camera scanning will be connected to the desktop pairing flow.'),
-      ]),
-    ));
-  }
-}
+  Future<void> _scan(BuildContext context) async {
+    setState(() => _connecting = true);
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        backgroundColor: const Color(0xFF15121B),
+        child: SizedBox(
+          height: 480,
+          child: Column(children: [
+            const Padding(
+              padding: EdgeInsets.all(18),
+              child: Text('Scan Lucy Desktop', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700)),
+            ),
+            Expanded(
+              child: MobileScanner(
+                onDetect: (capture) async {
+                  final raw = capture.barcodes.firstOrNull?.rawValue;
+                  if (raw == null) return;
+                  try {
+                    final data = jsonDecode(raw);
+                    if (data is! Map || data['lucy'] != 1) return;
+                    Navigator.of(context).pop();
+                    final connection = await _service.pairFromQr(raw);
+                    if (mounted) {
+                      setState(() => _connection = connection);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Connected to ${connection.name} ✓')),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Could not connect: $e')),
+                    );
+                  } finally {
+                    if (mounted) setState(() => _connecting = false);
+                  }
+                },
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.all(14),
+              child: Text('Point your camera at the QR code shown on Lucy.', textAlign: TextAlign.center),
+            ),
+          ]),
+        ),
+      ),
+    );
+    if (mounted) setState(() => _connecting = false);
+  }}
 
 class _OrDivider extends StatelessWidget {
   @override Widget build(BuildContext context) => Row(children: [
