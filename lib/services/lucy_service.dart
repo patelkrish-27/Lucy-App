@@ -121,7 +121,7 @@ class LucyService {
     final info = DeviceInfoPlugin();
     if (Platform.isAndroid) {
       final a = await info.androidInfo;
-      return '$a.manufacturer$ $a.model$'.trim();
+      return '${a.manufacturer} ${a.model}'.trim();
     }
     if (Platform.isIOS) {
       final i = await info.iosInfo;
